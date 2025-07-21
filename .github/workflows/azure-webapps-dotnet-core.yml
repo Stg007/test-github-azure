@@ -54,9 +54,26 @@ jobs:
 
       - name: Build with dotnet
         run: dotnet build --configuration Release
-
-      - name: dotnet publish
+      - name: Run tests
+        id: tests  # Added ID for reference
+        run: |
+          echo "Running tests..."
+          dotnet test --configuration Release --no-build --verbosity normal --logger "trx;LogFileName=testresults.trx"
+          if [ $? -ne 0 ]; then
+            echo "::error::Tests failed!"
+            exit 1
+          fi
+    
+      - name: Publish
+        if: success()  # Only run if previous steps succeeded
         run: dotnet publish -c Release -o ${{env.DOTNET_ROOT}}/myapp
+    
+      - name: Upload test results
+        if: always()  # Always upload test results even if tests fail
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-results
+          path: '**/*.trx'
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
